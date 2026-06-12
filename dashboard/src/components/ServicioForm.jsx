@@ -1,4 +1,10 @@
-import { useMemo, useState } from "react"
+import { useState, useMemo } from "react"
+import FieldError from "./FieldError"
+import {
+  validateFechaNoFutura,
+  validateMonto,
+  todayISO
+} from "../utils/validation"
 
 const TIPOS = [
   { value: "conversion", label: "Conversión" },
@@ -46,31 +52,36 @@ export default function ServicioForm({
     }
   })
 
+  const [errors, setErrors] = useState({})
+
   const selectedVehiculo = useMemo(
     () => vehiculos.find((v) => String(v.vehiculo_id) === String(form.vehiculo_id)),
     [vehiculos, form.vehiculo_id]
   )
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value
-    })
+    const { name, value } = e.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }))
+    }
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    if (!form.vehiculo_id || !form.tipo) {
-      alert("Vehículo y tipo de servicio son obligatorios")
-      return
-    }
-    if (!form.fecha) {
-      alert("La fecha es obligatoria")
-      return
-    }
-    if (form.monto === "" || Number(form.monto) < 0) {
-      alert("Indique un monto válido")
+    const nextErrors = {}
+    if (!form.vehiculo_id) nextErrors.vehiculo_id = "Seleccione un vehículo."
+    if (!form.tipo) nextErrors.tipo = "Seleccione el tipo de servicio."
+
+    const fechaErr = validateFechaNoFutura(form.fecha, "La fecha del trabajo")
+    if (fechaErr) nextErrors.fecha = fechaErr
+
+    const montoErr = validateMonto(form.monto)
+    if (montoErr) nextErrors.monto = montoErr
+
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors)
       return
     }
 
@@ -87,12 +98,14 @@ export default function ServicioForm({
     if (!editingServicio) {
       setForm({ ...empty, vehiculo_id: initialVehiculoId ? String(initialVehiculoId) : "" })
     }
+    setErrors({})
   }
 
   return (
     <form
       className={`service-form ${inModal ? "form-in-modal" : "panel"}`}
       onSubmit={handleSubmit}
+      noValidate
     >
       {!inModal && (
         <div className="page-head" style={{ marginBottom: "18px" }}>
@@ -101,14 +114,13 @@ export default function ServicioForm({
       )}
 
       <div className="form-grid">
-        <div className="field">
+        <div className={`field${errors.vehiculo_id ? " field--invalid" : ""}`}>
           <label htmlFor="vehiculo_id">Vehículo</label>
           <select
             id="vehiculo_id"
             name="vehiculo_id"
             value={form.vehiculo_id}
             onChange={handleChange}
-            required
           >
             <option value="">Seleccione un vehículo</option>
             {vehiculos.map((vehiculo) => (
@@ -117,17 +129,12 @@ export default function ServicioForm({
               </option>
             ))}
           </select>
+          <FieldError message={errors.vehiculo_id} />
         </div>
 
-        <div className="field">
+        <div className={`field${errors.tipo ? " field--invalid" : ""}`}>
           <label htmlFor="tipo">Tipo de servicio</label>
-          <select
-            id="tipo"
-            name="tipo"
-            value={form.tipo}
-            onChange={handleChange}
-            required
-          >
+          <select id="tipo" name="tipo" value={form.tipo} onChange={handleChange}>
             <option value="">Seleccione el tipo</option>
             {TIPOS.map((tipo) => (
               <option key={tipo.value} value={tipo.value}>
@@ -135,21 +142,23 @@ export default function ServicioForm({
               </option>
             ))}
           </select>
+          <FieldError message={errors.tipo} />
         </div>
 
-        <div className="field">
+        <div className={`field${errors.fecha ? " field--invalid" : ""}`}>
           <label htmlFor="fecha">Fecha del trabajo</label>
           <input
             id="fecha"
             type="date"
             name="fecha"
             value={form.fecha}
+            max={todayISO()}
             onChange={handleChange}
-            required
           />
+          <FieldError message={errors.fecha} />
         </div>
 
-        <div className="field">
+        <div className={`field${errors.monto ? " field--invalid" : ""}`}>
           <label htmlFor="monto">Monto (Bs)</label>
           <input
             id="monto"
@@ -160,8 +169,8 @@ export default function ServicioForm({
             placeholder="0.00"
             value={form.monto}
             onChange={handleChange}
-            required
           />
+          <FieldError message={errors.monto} />
         </div>
 
         <div className="field" style={{ gridColumn: "1 / -1" }}>

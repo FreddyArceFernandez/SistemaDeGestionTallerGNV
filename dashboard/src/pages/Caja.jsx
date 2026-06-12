@@ -1,7 +1,16 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { Link } from "react-router-dom"
 
 import Modal from "../components/Modal"
+import FieldError from "../components/FieldError"
 import { IconPlus, IconPencil, IconTrash } from "../components/CrudIcons"
+import { useUi } from "../context/useUi"
+import {
+  validateFechaNoFutura,
+  validateMonto,
+  validateRequired,
+  todayISO
+} from "../utils/validation"
 import { getServicios } from "../services/servicioService"
 import { getVehiculos } from "../services/vehiculoService"
 import { getClientes } from "../services/clienteService"
@@ -12,6 +21,7 @@ import {
   deleteIngresoManual,
   updateIngresoManual
 } from "../services/ingresoManualService"
+import { useSearchParams } from "react-router-dom"
 import { presetPeriodo } from "../utils/dateRanges"
 
 function montoServicio(s) {
@@ -59,6 +69,8 @@ const initialFiltros = {
 }
 
 export default function Caja() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { toast, confirm } = useUi()
   const [, bump] = useState(0)
   const [filtros, setFiltros] = useState(initialFiltros)
   const [pageIngreso, setPageIngreso] = useState(1)
@@ -70,6 +82,24 @@ export default function Caja() {
   const [editIng, setEditIng] = useState(null)
   const [formEg, setFormEg] = useState(blankMovimiento)
   const [formIng, setFormIng] = useState(blankMovimiento)
+  const [errorsEg, setErrorsEg] = useState({})
+  const [errorsIng, setErrorsIng] = useState({})
+
+  useEffect(() => {
+    if (searchParams.get("egreso") !== "1") return
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
+      setEditEgreso(null)
+      setFormEg(blankMovimiento())
+      setErrorsEg({})
+      setOpenModalEgreso(true)
+      setSearchParams({}, { replace: true })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [searchParams, setSearchParams])
 
   const load = () => bump((x) => x + 1)
 
@@ -200,11 +230,37 @@ export default function Caja() {
     setPageEgreso(1)
   }
 
-  const egresoCb = (e) => setFormEg((prev) => ({ ...prev, [e.target.name]: e.target.value }))
-  const ingCb = (e) => setFormIng((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+  const egresoCb = (e) => {
+    const { name, value } = e.target
+    setFormEg((prev) => ({ ...prev, [name]: value }))
+    if (errorsEg[name]) setErrorsEg((prev) => ({ ...prev, [name]: "" }))
+  }
+
+  const ingCb = (e) => {
+    const { name, value } = e.target
+    setFormIng((prev) => ({ ...prev, [name]: value }))
+    if (errorsIng[name]) setErrorsIng((prev) => ({ ...prev, [name]: "" }))
+  }
+
+  const validateMovimiento = (form) => {
+    const next = {}
+    const fechaErr = validateFechaNoFutura(form.fecha)
+    if (fechaErr) next.fecha = fechaErr
+    const montoErr = validateMonto(form.monto)
+    if (montoErr) next.monto = montoErr
+    const detalleErr = validateRequired(form.detalle, "El detalle")
+    if (detalleErr) next.detalle = detalleErr
+    return next
+  }
 
   const submitEgreso = (ev) => {
     ev.preventDefault()
+    const nextErrors = validateMovimiento(formEg)
+    if (Object.keys(nextErrors).length) {
+      setErrorsEg(nextErrors)
+      return
+    }
+
     try {
       if (editEgreso) {
         updateEgreso({
@@ -213,18 +269,26 @@ export default function Caja() {
           monto: formEg.monto,
           detalle: formEg.detalle
         })
+        toast.success("Egreso actualizado.")
       } else {
         createEgreso(formEg)
+        toast.success("Egreso registrado.")
       }
       closeEgreso()
       load()
     } catch (err) {
-      alert(err.message)
+      toast.error(err.message)
     }
   }
 
   const submitIngManual = (ev) => {
     ev.preventDefault()
+    const nextErrors = validateMovimiento(formIng)
+    if (Object.keys(nextErrors).length) {
+      setErrorsIng(nextErrors)
+      return
+    }
+
     try {
       if (editIng) {
         updateIngresoManual({
@@ -233,19 +297,22 @@ export default function Caja() {
           monto: formIng.monto,
           detalle: formIng.detalle
         })
+        toast.success("Ingreso actualizado.")
       } else {
         createIngresoManual(formIng)
+        toast.success("Ingreso registrado.")
       }
       closeIng()
       load()
     } catch (err) {
-      alert(err.message)
+      toast.error(err.message)
     }
   }
 
   const openNewEgreso = () => {
     setEditEgreso(null)
     setFormEg(blankMovimiento())
+    setErrorsEg({})
     setOpenModalEgreso(true)
   }
 
@@ -256,6 +323,7 @@ export default function Caja() {
       monto: String(row.monto),
       detalle: row.detalle
     })
+    setErrorsEg({})
     setOpenModalEgreso(true)
   }
 
@@ -263,11 +331,13 @@ export default function Caja() {
     setOpenModalEgreso(false)
     setEditEgreso(null)
     setFormEg(blankMovimiento())
+    setErrorsEg({})
   }
 
   const openNewIng = () => {
     setEditIng(null)
     setFormIng(blankMovimiento())
+    setErrorsIng({})
     setOpenModalIng(true)
   }
 
@@ -280,6 +350,7 @@ export default function Caja() {
       monto: String(row.monto),
       detalle: row.detalle
     })
+    setErrorsIng({})
     setOpenModalIng(true)
   }
 
@@ -287,18 +358,33 @@ export default function Caja() {
     setOpenModalIng(false)
     setEditIng(null)
     setFormIng(blankMovimiento())
+    setErrorsIng({})
   }
 
-  const handleDeleteEgreso = (id) => {
-    if (!confirm("¿Eliminar este egreso?")) return
+  const handleDeleteEgreso = async (id) => {
+    const ok = await confirm({
+      title: "Eliminar egreso",
+      message: "¿Eliminar este egreso?",
+      confirmLabel: "Eliminar",
+      variant: "danger"
+    })
+    if (!ok) return
     deleteEgreso(id)
     load()
+    toast.success("Egreso eliminado.")
   }
 
-  const handleDeleteIngManual = (id) => {
-    if (!confirm("¿Eliminar este ingreso manual?")) return
+  const handleDeleteIngManual = async (id) => {
+    const ok = await confirm({
+      title: "Eliminar ingreso",
+      message: "¿Eliminar este ingreso manual?",
+      confirmLabel: "Eliminar",
+      variant: "danger"
+    })
+    if (!ok) return
     deleteIngresoManual(id)
     load()
+    toast.success("Ingreso eliminado.")
   }
 
   return (
@@ -637,20 +723,21 @@ export default function Caja() {
           title={editEgreso ? "Egreso" : "Nuevo egreso"}
           onClose={closeEgreso}
         >
-          <form className="form-in-modal" onSubmit={submitEgreso}>
+          <form className="form-in-modal" onSubmit={submitEgreso} noValidate>
             <div className="form-grid">
-              <div className="field">
+              <div className={`field${errorsEg.fecha ? " field--invalid" : ""}`}>
                 <label htmlFor="egreso-fecha">Fecha</label>
                 <input
                   id="egreso-fecha"
                   name="fecha"
                   type="date"
+                  max={todayISO()}
                   value={formEg.fecha}
                   onChange={egresoCb}
-                  required
                 />
+                <FieldError message={errorsEg.fecha} />
               </div>
-              <div className="field">
+              <div className={`field${errorsEg.monto ? " field--invalid" : ""}`}>
                 <label htmlFor="egreso-monto">Monto (Bs)</label>
                 <input
                   id="egreso-monto"
@@ -660,10 +747,13 @@ export default function Caja() {
                   step="0.01"
                   value={formEg.monto}
                   onChange={egresoCb}
-                  required
                 />
+                <FieldError message={errorsEg.monto} />
               </div>
-              <div className="field" style={{ gridColumn: "1 / -1" }}>
+              <div
+                className={`field${errorsEg.detalle ? " field--invalid" : ""}`}
+                style={{ gridColumn: "1 / -1" }}
+              >
                 <label htmlFor="egreso-detalle">Detalle</label>
                 <textarea
                   id="egreso-detalle"
@@ -671,8 +761,8 @@ export default function Caja() {
                   rows={3}
                   value={formEg.detalle}
                   onChange={egresoCb}
-                  required
                 />
+                <FieldError message={errorsEg.detalle} />
               </div>
             </div>
             <div className="actions" style={{ marginTop: "18px", justifyContent: "flex-end" }}>
@@ -686,20 +776,21 @@ export default function Caja() {
 
       {openModalIng && (
         <Modal title={editIng ? "Ingreso manual" : "Nuevo ingreso"} onClose={closeIng}>
-          <form className="form-in-modal" onSubmit={submitIngManual}>
+          <form className="form-in-modal" onSubmit={submitIngManual} noValidate>
             <div className="form-grid">
-              <div className="field">
+              <div className={`field${errorsIng.fecha ? " field--invalid" : ""}`}>
                 <label htmlFor="ing-fecha">Fecha</label>
                 <input
                   id="ing-fecha"
                   name="fecha"
                   type="date"
+                  max={todayISO()}
                   value={formIng.fecha}
                   onChange={ingCb}
-                  required
                 />
+                <FieldError message={errorsIng.fecha} />
               </div>
-              <div className="field">
+              <div className={`field${errorsIng.monto ? " field--invalid" : ""}`}>
                 <label htmlFor="ing-monto">Monto (Bs)</label>
                 <input
                   id="ing-monto"
@@ -709,10 +800,13 @@ export default function Caja() {
                   step="0.01"
                   value={formIng.monto}
                   onChange={ingCb}
-                  required
                 />
+                <FieldError message={errorsIng.monto} />
               </div>
-              <div className="field" style={{ gridColumn: "1 / -1" }}>
+              <div
+                className={`field${errorsIng.detalle ? " field--invalid" : ""}`}
+                style={{ gridColumn: "1 / -1" }}
+              >
                 <label htmlFor="ing-detalle">Detalle</label>
                 <textarea
                   id="ing-detalle"
@@ -720,8 +814,8 @@ export default function Caja() {
                   rows={3}
                   value={formIng.detalle}
                   onChange={ingCb}
-                  required
                 />
+                <FieldError message={errorsIng.detalle} />
               </div>
             </div>
             <div className="actions" style={{ marginTop: "18px", justifyContent: "flex-end" }}>

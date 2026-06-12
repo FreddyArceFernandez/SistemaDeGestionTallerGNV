@@ -8,6 +8,12 @@ export default function MainLayout({ children }) {
 
   return (
     <div className="dashboard-layout">
+      <div className="dashboard-layout__bg" aria-hidden>
+        <span className="dashboard-blob dashboard-blob--1" />
+        <span className="dashboard-blob dashboard-blob--2" />
+        <span className="dashboard-blob dashboard-blob--3" />
+      </div>
+
       <Sidebar />
 
       <div className="dashboard-main">

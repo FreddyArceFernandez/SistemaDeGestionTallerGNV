@@ -1,5 +1,15 @@
 const KEY = "taller_vehiculos"
 import { getServicios } from "./servicioService"
+import { normalizePlaca } from "../utils/validation"
+
+const placaTaken = (placa, excludeId = null) => {
+  const normalized = normalizePlaca(placa)
+  return getVehiculos().some(
+    (v) =>
+      normalizePlaca(v.placa) === normalized &&
+      Number(v.vehiculo_id) !== Number(excludeId)
+  )
+}
 
 export const getVehiculos = () => {
   const data = localStorage.getItem(KEY)
@@ -11,9 +21,14 @@ export const saveVehiculos = (vehiculos) => {
 }
 
 export const createVehiculo = (vehiculo) => {
+  const placa = normalizePlaca(vehiculo.placa)
+  if (!placa) throw new Error("La placa es obligatoria.")
+  if (placaTaken(placa)) throw new Error("Esta placa ya está registrada.")
+
   const vehiculos = getVehiculos()
   const nuevo = {
     ...vehiculo,
+    placa,
     cliente_id: Number(vehiculo.cliente_id),
     vehiculo_id: Date.now()
   }
@@ -23,12 +38,16 @@ export const createVehiculo = (vehiculo) => {
 
 export const updateVehiculo = (payload) => {
   const vid = Number(payload.vehiculo_id)
+  const placa = normalizePlaca(payload.placa)
+  if (!placa) throw new Error("La placa es obligatoria.")
+  if (placaTaken(placa, vid)) throw new Error("Esta placa ya está registrada.")
+
   const vehiculos = getVehiculos().map((v) =>
     Number(v.vehiculo_id) === vid
       ? {
           ...v,
           cliente_id: Number(payload.cliente_id),
-          placa: payload.placa,
+          placa,
           marca: payload.marca ?? "",
           modelo: payload.modelo ?? "",
           anio: payload.anio ?? ""

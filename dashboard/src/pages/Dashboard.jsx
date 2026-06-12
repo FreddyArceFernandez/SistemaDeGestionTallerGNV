@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom"
 import { getClientes } from "../services/clienteService"
+import { IconPlus } from "../components/CrudIcons"
 import { getVehiculos } from "../services/vehiculoService"
 import { getServicios } from "../services/servicioService"
 import { getUpcomingServices } from "../services/alertService"
@@ -24,10 +26,21 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-page">
-      <header className="dashboard-page__intro">
+      <header className="dashboard-page__intro dash-intro-with-actions">
         <div>
           <h1>Dashboard</h1>
           <p>Resumen general</p>
+        </div>
+        <div className="dash-quick-actions" aria-label="Acciones rápidas">
+          <Link to="/clientes?nuevo=1" className="dash-quick-action">
+            <IconPlus size={16} /> Nuevo cliente
+          </Link>
+          <Link to="/servicios?nuevo=1" className="dash-quick-action">
+            <IconPlus size={16} /> Nuevo servicio
+          </Link>
+          <Link to="/caja?egreso=1" className="dash-quick-action dash-quick-action--out">
+            <IconPlus size={16} /> Registrar egreso
+          </Link>
         </div>
       </header>
 

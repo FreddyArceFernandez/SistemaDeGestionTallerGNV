@@ -1,9 +1,12 @@
 import { useState, useMemo } from "react"
+import FieldError from "./FieldError"
+import { validatePlaca, validateRequired } from "../utils/validation"
 
 export default function VehiculoForm({
   onSave,
   clientes,
   editingVehiculo = null,
+  initialClienteId = "",
   inModal = false
 }) {
   const empty = useMemo(
@@ -27,21 +30,34 @@ export default function VehiculoForm({
           anio: String(editingVehiculo.anio ?? ""),
           vehiculo_id: editingVehiculo.vehiculo_id
         }
-      : { ...empty }
+      : {
+          ...empty,
+          cliente_id: initialClienteId ? String(initialClienteId) : ""
+        }
   )
 
+  const [errors, setErrors] = useState({})
+
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value
-    })
+    const { name, value } = e.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }))
+    }
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    if (!form.cliente_id || !form.placa) {
-      alert("Cliente y placa son obligatorios")
+    const nextErrors = {}
+    const clienteErr = validateRequired(form.cliente_id, "El cliente")
+    if (clienteErr) nextErrors.cliente_id = clienteErr
+
+    const placaErr = validatePlaca(form.placa)
+    if (placaErr) nextErrors.placa = placaErr
+
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors)
       return
     }
 
@@ -60,24 +76,24 @@ export default function VehiculoForm({
     onSave(payload)
 
     setForm(editingVehiculo ? { ...form } : { ...empty })
+    setErrors({})
   }
 
   return (
-    <form className={inModal ? "form-in-modal" : "panel"} onSubmit={handleSubmit}>
+    <form className={inModal ? "form-in-modal" : "panel"} onSubmit={handleSubmit} noValidate>
       {!inModal && (
         <div className="page-head" style={{ marginBottom: "16px" }}>
           <h2>{editingVehiculo ? "Editar vehículo" : "Registrar vehículo"}</h2>
         </div>
       )}
       <div className="form-grid">
-        <div className="field">
+        <div className={`field${errors.cliente_id ? " field--invalid" : ""}`}>
           <label htmlFor="vehiculo-cliente">Cliente</label>
           <select
             id="vehiculo-cliente"
             name="cliente_id"
             value={form.cliente_id}
             onChange={handleChange}
-            required
           >
             <option value="">Seleccionar cliente</option>
             {clientes.map((cliente) => (
@@ -86,17 +102,18 @@ export default function VehiculoForm({
               </option>
             ))}
           </select>
+          <FieldError message={errors.cliente_id} />
         </div>
-        <div className="field">
+        <div className={`field${errors.placa ? " field--invalid" : ""}`}>
           <label htmlFor="vehiculo-placa">Placa</label>
           <input
             id="vehiculo-placa"
             name="placa"
-            placeholder="Placa"
+            placeholder="Ej. 1234ABC"
             value={form.placa}
             onChange={handleChange}
-            required
           />
+          <FieldError message={errors.placa} />
         </div>
         <div className="field">
           <label htmlFor="vehiculo-marca">Marca</label>

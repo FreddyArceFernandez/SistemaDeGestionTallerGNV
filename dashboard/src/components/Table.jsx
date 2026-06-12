@@ -1,6 +1,6 @@
-import { IconPencil, IconTrash } from "./CrudIcons"
+import { IconPencil, IconTrash, IconCar } from "./CrudIcons"
 
-function Table({ data, onEdit, onDelete }) {
+function Table({ data, onEdit, onDelete, onAddVehicle }) {
   return (
     <div className="table-wrap">
       <table>
@@ -27,6 +27,17 @@ function Table({ data, onEdit, onDelete }) {
                 <td>{cliente.celular}</td>
                 <td>
                   <div className="btn-icon-cluster">
+                    {onAddVehicle ? (
+                      <button
+                        type="button"
+                        className="btn-icon btn-icon--accent"
+                        title="Agregar vehículo"
+                        aria-label="Agregar vehículo"
+                        onClick={() => onAddVehicle(cliente.cliente_id)}
+                      >
+                        <IconCar />
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="btn-icon btn-icon--edit"

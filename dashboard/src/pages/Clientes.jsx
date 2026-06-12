@@ -1,7 +1,11 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import Table from "../components/Table"
 import Modal from "../components/Modal"
+import FieldError from "../components/FieldError"
 import { IconPlus } from "../components/CrudIcons"
+import { useUi } from "../context/useUi"
+import { validateCelular, validateRequired } from "../utils/validation"
 
 import {
   getClientes,
@@ -11,86 +15,123 @@ import {
 } from "../services/clienteService"
 
 function Clientes() {
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { toast, confirm } = useUi()
 
-  const [clientes, setClientes] = useState(() => getClientes());
-
-  const [openModal, setOpenModal] = useState(false);
-
+  const [clientes, setClientes] = useState(() => getClientes())
+  const [openModal, setOpenModal] = useState(false)
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
     celular: ""
-  });
+  })
+  const [errors, setErrors] = useState({})
+  const [editing, setEditing] = useState(false)
 
-  const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    if (searchParams.get("nuevo") !== "1") return
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
+      setEditing(false)
+      setForm({ nombre: "", apellido: "", celular: "" })
+      setErrors({})
+      setOpenModal(true)
+      setSearchParams({}, { replace: true })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [searchParams, setSearchParams])
 
   const loadClientes = () => {
-    const data = getClientes();
-    setClientes(data);
-  };
+    setClientes(getClientes())
+  }
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value
-    });
-  };
+    const { name, value } = e.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }))
+    }
+  }
+
+  const validateForm = () => {
+    const nextErrors = {}
+    const nombreErr = validateRequired(form.nombre, "El nombre")
+    if (nombreErr) nextErrors.nombre = nombreErr
+
+    const celErr = validateCelular(form.celular)
+    if (celErr) nextErrors.celular = celErr
+
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
+  }
 
   const handleSubmit = () => {
+    if (!validateForm()) return
+
     try {
       if (editing) {
-        updateCliente(form);
+        updateCliente(form)
+        toast.success("Cliente actualizado.")
       } else {
-        createCliente(form);
+        createCliente(form)
+        toast.success("Cliente registrado.")
       }
     } catch (error) {
-      alert(error.message);
-      return;
+      toast.error(error.message)
+      return
     }
 
-    setForm({
-      nombre: "",
-      apellido: "",
-      celular: ""
-    });
+    setForm({ nombre: "", apellido: "", celular: "" })
+    setErrors({})
+    setEditing(false)
+    setOpenModal(false)
+    loadClientes()
+  }
 
-    setEditing(false);
+  const handleDelete = async (id) => {
+    const ok = await confirm({
+      title: "Eliminar cliente",
+      message: "¿Eliminar este cliente? Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      variant: "danger"
+    })
+    if (!ok) return
 
-    setOpenModal(false);
-
-    loadClientes();
-  };
-
-  const handleDelete = (id) => {
-    if (confirm("¿Eliminar cliente?")) {
-      try {
-        deleteCliente(id);
-        loadClientes();
-      } catch (error) {
-        alert(error.message);
-      }
+    try {
+      deleteCliente(id)
+      loadClientes()
+      toast.success("Cliente eliminado.")
+    } catch (error) {
+      toast.error(error.message)
     }
-  };
+  }
 
   const handleEdit = (cliente) => {
     setForm(cliente)
+    setErrors({})
     setEditing(true)
     setOpenModal(true)
   }
 
   const openNuevoCliente = () => {
     setEditing(false)
-    setForm({
-      nombre: "",
-      apellido: "",
-      celular: ""
-    })
+    setForm({ nombre: "", apellido: "", celular: "" })
+    setErrors({})
     setOpenModal(true)
   }
 
   const closeModal = () => {
     setOpenModal(false)
     setEditing(false)
+    setErrors({})
+  }
+
+  const handleAddVehicle = (clienteId) => {
+    navigate(`/vehiculos?cliente_id=${clienteId}`)
   }
 
   return (
@@ -109,16 +150,13 @@ function Clientes() {
         data={clientes}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onAddVehicle={handleAddVehicle}
       />
 
       {openModal && (
-
-        <Modal
-          title={editing ? "Editar" : "Nuevo"}
-          onClose={closeModal}
-        >
+        <Modal title={editing ? "Editar" : "Nuevo"} onClose={closeModal}>
           <div className="form-grid">
-            <div className="field">
+            <div className={`field${errors.nombre ? " field--invalid" : ""}`}>
               <label htmlFor="cliente-nombre">Nombre</label>
               <input
                 id="cliente-nombre"
@@ -127,6 +165,7 @@ function Clientes() {
                 value={form.nombre}
                 onChange={handleChange}
               />
+              <FieldError message={errors.nombre} />
             </div>
             <div className="field">
               <label htmlFor="cliente-apellido">Apellido</label>
@@ -138,28 +177,31 @@ function Clientes() {
                 onChange={handleChange}
               />
             </div>
-            <div className="field" style={{ gridColumn: "1 / -1" }}>
+            <div
+              className={`field${errors.celular ? " field--invalid" : ""}`}
+              style={{ gridColumn: "1 / -1" }}
+            >
               <label htmlFor="cliente-celular">Celular</label>
               <input
                 id="cliente-celular"
                 name="celular"
-                placeholder="Celular"
+                placeholder="71234567"
+                inputMode="numeric"
                 value={form.celular}
                 onChange={handleChange}
               />
+              <FieldError message={errors.celular} />
             </div>
           </div>
           <div className="actions" style={{ marginTop: "14px", justifyContent: "flex-end" }}>
-            <button className="btn btn-primary" onClick={handleSubmit}>
+            <button type="button" className="btn btn-primary" onClick={handleSubmit}>
               Guardar
             </button>
           </div>
         </Modal>
-
       )}
-
     </div>
-  );
+  )
 }
 
-export default Clientes;
+export default Clientes

@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom"
 import ServicioForm from "../components/ServicioForm"
 import Modal from "../components/Modal"
 import { IconPlus, IconPencil, IconTrash } from "../components/CrudIcons"
+import { useUi } from "../context/useUi"
 
 import { getClientes } from "../services/clienteService"
 
@@ -41,7 +42,8 @@ const initialFiltros = {
 }
 
 export default function Servicios() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { toast, confirm } = useUi()
   const [servicios, setServicios] = useState(() => getServicios())
   const [vehiculos, setVehiculos] = useState(() => getVehiculos())
   const [clientes, setClientes] = useState(() => getClientes())
@@ -57,19 +59,22 @@ export default function Servicios() {
 
   useEffect(() => {
     const vid = searchParams.get("vehiculo_id")
-    if (!vid) return
+    const nuevo = searchParams.get("nuevo") === "1"
+    if (!vid && !nuevo) return
+
     let cancelled = false
     queueMicrotask(() => {
       if (cancelled) return
-      setInitialVehiculoId(vid)
+      setInitialVehiculoId(vid || "")
       setEditingServicio(null)
       setFormKey((k) => k + 1)
       setOpenModal(true)
+      setSearchParams({}, { replace: true })
     })
     return () => {
       cancelled = true
     }
-  }, [searchParams])
+  }, [searchParams, setSearchParams])
 
   const loadData = () => {
     setServicios(getServicios())
@@ -87,24 +92,33 @@ export default function Servicios() {
     try {
       if (servicioPayload.servicio_id != null) {
         updateServicio(servicioPayload)
+        toast.success("Servicio actualizado.")
       } else {
         createServicio(servicioPayload)
+        toast.success("Servicio registrado.")
       }
       loadData()
       closeModal()
     } catch (error) {
-      alert(error.message)
+      toast.error(error.message)
     }
   }
 
-  const handleDelete = (id) => {
-    if (confirm("¿Eliminar servicio?")) {
-      try {
-        deleteServicio(id)
-        loadData()
-      } catch (error) {
-        alert(error.message)
-      }
+  const handleDelete = async (id) => {
+    const ok = await confirm({
+      title: "Eliminar servicio",
+      message: "¿Eliminar este servicio? Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      variant: "danger"
+    })
+    if (!ok) return
+
+    try {
+      deleteServicio(id)
+      loadData()
+      toast.success("Servicio eliminado.")
+    } catch (error) {
+      toast.error(error.message)
     }
   }
 
