@@ -1,8 +1,3 @@
-Aquí está el README completo, listo para copiar y pegar tal cual en el archivo README.md de la raíz del repo SistemaDeGestionTallerGNV:
-markdown# Sistema de Gestión — Taller de Conversión GNV
-
-Sistema web full-stack para la gestión integral de un taller de conversión vehicular a GNV (Gas Natural Vehicular). Desarrollado como proyecto independiente para un cliente real, actualmente en producción.
-
 ## 📋 Descripción
 
 Esta aplicación centraliza la administración de clientes, vehículos, órdenes de servicio y flujo de caja del taller, reemplazando el registro manual en papel/Excel por un sistema digital con seguimiento en tiempo real.
