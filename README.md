@@ -320,10 +320,3 @@ https://github.com/FreddyArceFernandez
 LinkedIn:
 https://linkedin.com/in/freddyarcef
 
-
-### Cambios frente al original:
-- Subí el nivel de "proyecto de taller" → **producto software empresarial**.
-- Destaco que fue usado por un cliente real.
-- Agregué arquitectura y decisiones técnicas.
-- La parte de limitaciones ahora no perjudica la imagen; la convierte en una explicación profesional.
-- El README ahora vende tu capacidad como **Full-Stack Engineer**, no solo el código.
