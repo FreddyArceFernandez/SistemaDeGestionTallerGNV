@@ -30,3 +30,46 @@ Esta aplicación centraliza la administración de clientes, vehículos, órdenes
 - VS Code
 
 ## 📁 Estructura del proyecto
+sistemaTaller
+└─ dashboard
+├─ src
+│  ├─ components/       # Formularios y componentes reutilizables
+│  ├─ pages/             # Vistas principales (Clientes, Vehículos, Pagos, etc.)
+│  ├─ services/          # Lógica de conexión a la API
+│  ├─ layouts/           # Estructura general del dashboard
+│  └─ data/              # Manejo de almacenamiento local
+└─ public/                # Recursos estáticos
+
+## 🚀 Cómo ejecutar el proyecto localmente
+
+```bash
+# Clonar el repositorio
+git clone https://github.com/FreddyArceFernandez/SistemaDeGestionTallerGNV.git
+
+# Entrar a la carpeta del dashboard
+cd SistemaDeGestionTallerGNV/dashboard
+
+# Instalar dependencias
+npm install
+
+# Ejecutar en modo desarrollo
+npm run dev
+```
+
+El proyecto quedará disponible en `http://localhost:5173` (puerto por defecto de Vite).
+
+## 📊 Resultados en producción
+
+- Más de 100 órdenes de servicio activas gestionadas actualmente por el cliente.
+- Sistema de seguimiento de próximos servicios que ha generado una fuente de ingreso recurrente para el negocio.
+- 0 interrupciones operativas desde su puesta en marcha.
+
+## 👤 Autor
+
+**Freddy Arce Fernandez**
+Ingeniero de Sistemas — Full-Stack & IA Aplicada
+[LinkedIn](https://www.linkedin.com/in/freddyarcef) · [GitHub](https://github.com/FreddyArceFernandez)
+
+## 📝 Notas
+
+Proyecto desarrollado de forma independiente para un cliente real (taller de conversión GNV). Por motivos de confidencialidad, algunos datos de configuración/producción no están incluidos en este repositorio.
