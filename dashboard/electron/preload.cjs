@@ -1,0 +1,1 @@
+// Puente seguro Electron <-> React. Vacío por ahora.
