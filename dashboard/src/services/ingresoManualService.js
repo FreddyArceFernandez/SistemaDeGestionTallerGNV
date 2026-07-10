@@ -1,15 +1,25 @@
 const KEY = "taller_ingresos_manuales"
+const electronIngresosManuales = () => window.tallerApi?.ingresosManuales
+
+export const isIngresoManualDbAvailable = () => Boolean(electronIngresosManuales())
 
 export const getIngresosManuales = () => {
   const data = localStorage.getItem(KEY)
   return data ? JSON.parse(data) : []
 }
 
+export const getIngresosManualesAsync = async () => {
+  if (isIngresoManualDbAvailable()) return electronIngresosManuales().getAll()
+  return getIngresosManuales()
+}
+
 export const saveIngresosManuales = (rows) => {
   localStorage.setItem(KEY, JSON.stringify(rows))
 }
 
-export const createIngresoManual = (payload) => {
+export const createIngresoManual = async (payload) => {
+  if (isIngresoManualDbAvailable()) return electronIngresosManuales().create(payload)
+
   const fecha = String(payload.fecha || "").trim()
   if (!fecha) throw new Error("La fecha es obligatoria.")
 
@@ -20,16 +30,20 @@ export const createIngresoManual = (payload) => {
   if (!detalle) throw new Error("El detalle es obligatorio.")
 
   const rows = getIngresosManuales()
-  rows.push({
+  const nuevo = {
     ingreso_manual_id: Date.now(),
     fecha,
     monto,
     detalle
-  })
+  }
+  rows.push(nuevo)
   saveIngresosManuales(rows)
+  return nuevo
 }
 
-export const updateIngresoManual = (payload) => {
+export const updateIngresoManual = async (payload) => {
+  if (isIngresoManualDbAvailable()) return electronIngresosManuales().update(payload)
+
   const id = Number(payload.ingreso_manual_id)
   const fecha = String(payload.fecha || "").trim()
   if (!fecha) throw new Error("La fecha es obligatoria.")
@@ -47,7 +61,9 @@ export const updateIngresoManual = (payload) => {
   saveIngresosManuales(rows)
 }
 
-export const deleteIngresoManual = (id) => {
+export const deleteIngresoManual = async (id) => {
+  if (isIngresoManualDbAvailable()) return electronIngresosManuales().delete(id)
+
   const rid = Number(id)
   const rows = getIngresosManuales().filter((r) => Number(r.ingreso_manual_id) !== rid)
   saveIngresosManuales(rows)

@@ -2,12 +2,22 @@ import { getData, saveData } from "../data/storage";
 import { getVehiculos } from "./vehiculoService";
 
 const KEY = "taller_clientes";
+const electronClientes = () => window.tallerApi?.clientes;
+
+export const isClienteDbAvailable = () => Boolean(electronClientes());
 
 export const getClientes = () => {
   return getData(KEY);
 };
 
-export const createCliente = (cliente) => {
+export const getClientesAsync = async () => {
+  if (isClienteDbAvailable()) return electronClientes().getAll();
+  return getClientes();
+};
+
+export const createCliente = async (cliente) => {
+  if (isClienteDbAvailable()) return electronClientes().create(cliente);
+
   const clientes = getData(KEY);
 
   cliente.cliente_id = Date.now();
@@ -17,7 +27,9 @@ export const createCliente = (cliente) => {
   saveData(KEY, clientes);
 };
 
-export const deleteCliente = (id) => {
+export const deleteCliente = async (id) => {
+  if (isClienteDbAvailable()) return electronClientes().delete(id);
+
   const clienteId = Number(id);
   const vehiculos = getVehiculos().filter(
     (v) => Number(v.cliente_id) === clienteId
@@ -34,7 +46,9 @@ export const deleteCliente = (id) => {
   saveData(KEY, nuevos);
 };
 
-export const updateCliente = (clienteActualizado) => {
+export const updateCliente = async (clienteActualizado) => {
+  if (isClienteDbAvailable()) return electronClientes().update(clienteActualizado);
+
   const clientes = getData(KEY)
   const id = Number(clienteActualizado.cliente_id)
 

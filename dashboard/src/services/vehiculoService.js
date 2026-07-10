@@ -1,6 +1,24 @@
-const KEY = "taller_vehiculos"
-import { getServicios } from "./servicioService"
 import { normalizePlaca } from "../utils/validation"
+import { getServicios } from "./servicioService"
+
+const KEY = "taller_vehiculos"
+const electronVehiculos = () => window.tallerApi?.vehiculos
+
+export const isVehiculoDbAvailable = () => Boolean(electronVehiculos())
+
+export const getVehiculos = () => {
+  const data = localStorage.getItem(KEY)
+  return data ? JSON.parse(data) : []
+}
+
+export const getVehiculosAsync = async () => {
+  if (isVehiculoDbAvailable()) return electronVehiculos().getAll()
+  return getVehiculos()
+}
+
+export const saveVehiculos = (vehiculos) => {
+  localStorage.setItem(KEY, JSON.stringify(vehiculos))
+}
 
 const placaTaken = (placa, excludeId = null) => {
   const normalized = normalizePlaca(placa)
@@ -11,16 +29,9 @@ const placaTaken = (placa, excludeId = null) => {
   )
 }
 
-export const getVehiculos = () => {
-  const data = localStorage.getItem(KEY)
-  return data ? JSON.parse(data) : []
-}
+export const createVehiculo = async (vehiculo) => {
+  if (isVehiculoDbAvailable()) return electronVehiculos().create(vehiculo)
 
-export const saveVehiculos = (vehiculos) => {
-  localStorage.setItem(KEY, JSON.stringify(vehiculos))
-}
-
-export const createVehiculo = (vehiculo) => {
   const placa = normalizePlaca(vehiculo.placa)
   if (!placa) throw new Error("La placa es obligatoria.")
   if (placaTaken(placa)) throw new Error("Esta placa ya está registrada.")
@@ -34,9 +45,12 @@ export const createVehiculo = (vehiculo) => {
   }
   vehiculos.push(nuevo)
   saveVehiculos(vehiculos)
+  return nuevo
 }
 
-export const updateVehiculo = (payload) => {
+export const updateVehiculo = async (payload) => {
+  if (isVehiculoDbAvailable()) return electronVehiculos().update(payload)
+
   const vid = Number(payload.vehiculo_id)
   const placa = normalizePlaca(payload.placa)
   if (!placa) throw new Error("La placa es obligatoria.")
@@ -60,7 +74,9 @@ export const updateVehiculo = (payload) => {
   saveVehiculos(vehiculos)
 }
 
-export const deleteVehiculo = (id) => {
+export const deleteVehiculo = async (id) => {
+  if (isVehiculoDbAvailable()) return electronVehiculos().delete(id)
+
   const vehiculoId = Number(id)
   const servicios = getServicios().filter(
     (s) => Number(s.vehiculo_id) === vehiculoId
@@ -77,4 +93,9 @@ export const deleteVehiculo = (id) => {
 export const getVehiculoById = (id) => {
   const vehiculos = getVehiculos()
   return vehiculos.find(v => String(v.vehiculo_id) === String(id))
+}
+
+export const getVehiculoByIdAsync = async (id) => {
+  if (isVehiculoDbAvailable()) return electronVehiculos().getById(id)
+  return getVehiculoById(id)
 }

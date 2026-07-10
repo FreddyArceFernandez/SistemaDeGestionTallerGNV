@@ -82,7 +82,7 @@ export default function VehiculoForm({
   return (
     <form className={inModal ? "form-in-modal" : "panel"} onSubmit={handleSubmit} noValidate>
       {!inModal && (
-        <div className="page-head" style={{ marginBottom: "16px" }}>
+        <div className="page-head form-section-head">
           <h2>{editingVehiculo ? "Editar vehículo" : "Registrar vehículo"}</h2>
         </div>
       )}
@@ -146,7 +146,7 @@ export default function VehiculoForm({
           />
         </div>
       </div>
-      <div className="actions" style={{ marginTop: "16px", justifyContent: "flex-end" }}>
+      <div className="form-actions">
         <button className="btn btn-primary" type="submit">
           Guardar
         </button>

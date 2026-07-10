@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import VehiculoForm from "../components/VehiculoForm"
 import Modal from "../components/Modal"
@@ -7,12 +7,13 @@ import { useUi } from "../context/useUi"
 
 import {
   getVehiculos,
+  getVehiculosAsync,
   createVehiculo,
   deleteVehiculo,
   updateVehiculo
 } from "../services/vehiculoService"
 
-import { getClientes } from "../services/clienteService"
+import { getClientes, getClientesAsync } from "../services/clienteService"
 
 const Vehiculos = () => {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -20,6 +21,7 @@ const Vehiculos = () => {
 
   const [vehiculos, setVehiculos] = useState(() => getVehiculos())
   const [clientes, setClientes] = useState(() => getClientes())
+  const [query, setQuery] = useState("")
   const [openModal, setOpenModal] = useState(false)
   const [formKey, setFormKey] = useState(0)
   const [initialClienteId, setInitialClienteId] = useState("")
@@ -38,21 +40,39 @@ const Vehiculos = () => {
     })
   }, [searchParams, setSearchParams])
 
-  const loadData = () => {
-    setVehiculos(getVehiculos())
-    setClientes(getClientes())
-  }
+  const loadData = useCallback(async () => {
+    try {
+      const [vehiculosData, clientesData] = await Promise.all([
+        getVehiculosAsync(),
+        getClientesAsync()
+      ])
+      setVehiculos(vehiculosData)
+      setClientes(clientesData)
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }, [toast])
 
-  const handleSave = (vehiculoPayload) => {
+  useEffect(() => {
+    let cancelled = false
+    queueMicrotask(() => {
+      if (!cancelled) loadData()
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [loadData])
+
+  const handleSave = async (vehiculoPayload) => {
     try {
       if (editingVehiculo) {
-        updateVehiculo(vehiculoPayload)
+        await updateVehiculo(vehiculoPayload)
         toast.success("Vehículo actualizado.")
       } else {
-        createVehiculo(vehiculoPayload)
+        await createVehiculo(vehiculoPayload)
         toast.success("Vehículo registrado.")
       }
-      loadData()
+      await loadData()
       setOpenModal(false)
       setEditingVehiculo(null)
       setInitialClienteId("")
@@ -71,8 +91,8 @@ const Vehiculos = () => {
     if (!ok) return
 
     try {
-      deleteVehiculo(id)
-      loadData()
+      await deleteVehiculo(id)
+      await loadData()
       toast.success("Vehículo eliminado.")
     } catch (error) {
       toast.error(error.message)
@@ -101,15 +121,23 @@ const Vehiculos = () => {
 
   const clienteNombre = (cliente_id) => {
     const c = clientes.find((x) => Number(x.cliente_id) === Number(cliente_id))
-    return c ? `${c.nombre} ${c.apellido}` : "—"
+    return c ? `${c.nombre} ${c.apellido}`.trim() : "—"
   }
+
+  const vehiculosFiltrados = vehiculos.filter((vehiculo) => {
+    const q = query.trim().toLowerCase()
+    if (!q) return true
+    return `${clienteNombre(vehiculo.cliente_id)} ${vehiculo.placa || ""} ${vehiculo.marca || ""} ${vehiculo.modelo || ""} ${vehiculo.anio || ""}`
+      .toLowerCase()
+      .includes(q)
+  })
 
   return (
     <div className="entity-page">
       <div className="page-head page-head-row">
         <div>
           <h1>Vehículos</h1>
-          <p>Por cliente</p>
+          <p>{vehiculos.length} registrados</p>
         </div>
         <button type="button" className="btn btn-primary" onClick={openNuevoVehiculo}>
           <IconPlus size={17} /> Nuevo vehículo
@@ -132,8 +160,23 @@ const Vehiculos = () => {
         </Modal>
       )}
 
+      <div className="page-toolbar">
+        <div className="field page-toolbar__search">
+          <label htmlFor="buscar-vehiculo">Buscar vehículo</label>
+          <input
+            id="buscar-vehiculo"
+            placeholder="Cliente, placa, marca, modelo o año"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        <span className="entity-count">
+          {vehiculosFiltrados.length} resultado{vehiculosFiltrados.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
       <div className="table-wrap">
-        <table>
+        <table className="data-table">
           <thead>
             <tr>
               <th>Cliente</th>
@@ -146,14 +189,14 @@ const Vehiculos = () => {
           </thead>
 
           <tbody>
-            {vehiculos.length === 0 ? (
+            {vehiculosFiltrados.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: "center", padding: "24px" }}>
+                <td colSpan="6" className="table-empty">
                   No hay vehículos registrados.
                 </td>
               </tr>
             ) : (
-              vehiculos.map((v) => (
+              vehiculosFiltrados.map((v) => (
                 <tr key={v.vehiculo_id}>
                   <td>{clienteNombre(v.cliente_id)}</td>
                   <td>{v.placa}</td>

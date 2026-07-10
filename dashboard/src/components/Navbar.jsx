@@ -23,7 +23,7 @@ export default function Navbar() {
           <h1>{pageTitle}</h1>
         </div>
       </div>
-      <div className="navbar-pill">Admin</div>
+      <div className="navbar-pill">Secretaría</div>
     </header>
   )
 }

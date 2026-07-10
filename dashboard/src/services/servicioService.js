@@ -1,5 +1,8 @@
 const KEY = "taller_servicios"
 const VEHICULOS_KEY = "taller_vehiculos"
+const electronServicios = () => window.tallerApi?.servicios
+
+export const isServicioDbAvailable = () => Boolean(electronServicios())
 
 const existsVehiculo = (vehiculoId) => {
   const data = localStorage.getItem(VEHICULOS_KEY)
@@ -12,11 +15,18 @@ export const getServicios = () => {
   return data ? JSON.parse(data) : []
 }
 
+export const getServiciosAsync = async () => {
+  if (isServicioDbAvailable()) return electronServicios().getAll()
+  return getServicios()
+}
+
 export const saveServicios = (servicios) => {
   localStorage.setItem(KEY, JSON.stringify(servicios))
 }
 
-export const createServicio = (servicio) => {
+export const createServicio = async (servicio) => {
+  if (isServicioDbAvailable()) return electronServicios().create(servicio)
+
   const vehiculoId = Number(servicio.vehiculo_id)
 
   if (!existsVehiculo(vehiculoId)) {
@@ -45,17 +55,21 @@ export const createServicio = (servicio) => {
   }
 
   servicios.push(nuevo)
-
   saveServicios(servicios)
+  return nuevo
 }
 
-export const deleteServicio = (id) => {
+export const deleteServicio = async (id) => {
+  if (isServicioDbAvailable()) return electronServicios().delete(id)
+
   const servicioId = Number(id)
   const servicios = getServicios().filter(s => Number(s.servicio_id) !== servicioId)
   saveServicios(servicios)
 }
 
-export const updateServicio = (payload) => {
+export const updateServicio = async (payload) => {
+  if (isServicioDbAvailable()) return electronServicios().update(payload)
+
   const sid = Number(payload.servicio_id)
   const vehiculoId = Number(payload.vehiculo_id)
 

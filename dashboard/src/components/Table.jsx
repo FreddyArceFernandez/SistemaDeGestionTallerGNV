@@ -3,7 +3,7 @@ import { IconPencil, IconTrash, IconCar } from "./CrudIcons"
 function Table({ data, onEdit, onDelete, onAddVehicle }) {
   return (
     <div className="table-wrap">
-      <table>
+      <table className="data-table">
         <thead>
           <tr>
             <th>Nombre</th>
@@ -15,7 +15,7 @@ function Table({ data, onEdit, onDelete, onAddVehicle }) {
         <tbody>
           {data.length === 0 ? (
             <tr>
-              <td colSpan="4" style={{ textAlign: "center", padding: "24px" }}>
+              <td colSpan="4" className="table-empty">
                 No hay clientes registrados.
               </td>
             </tr>

@@ -1,23 +1,53 @@
+import { useCallback, useEffect, useState } from "react"
 import { Link } from "react-router-dom"
-import { getClientes } from "../services/clienteService"
+import { getClientesAsync } from "../services/clienteService"
 import { IconPlus } from "../components/CrudIcons"
-import { getVehiculos } from "../services/vehiculoService"
-import { getServicios } from "../services/servicioService"
-import { getUpcomingServices } from "../services/alertService"
+import { getVehiculosAsync } from "../services/vehiculoService"
+import { getServiciosAsync } from "../services/servicioService"
+import { getUpcomingServicesAsync } from "../services/alertService"
 import ProximosServicios from "../components/ProximosServicios"
 import MetricWidget from "../components/dashboard/MetricWidget"
 import OperationsWidget from "../components/dashboard/OperationsWidget"
 import FinanceWidget from "../components/dashboard/FinanceWidget"
+import { useUi } from "../context/useUi"
 
 function montoServicio(s) {
   return Number(s.monto ?? s.costo_total ?? 0) || 0
 }
 
 export default function Dashboard() {
-  const clientes = getClientes()
-  const vehiculos = getVehiculos()
-  const servicios = getServicios()
-  const proximos = getUpcomingServices(7)
+  const { toast } = useUi()
+  const [clientes, setClientes] = useState([])
+  const [vehiculos, setVehiculos] = useState([])
+  const [servicios, setServicios] = useState([])
+  const [proximos, setProximos] = useState([])
+
+  const loadDashboard = useCallback(async () => {
+    try {
+      const [clientesData, vehiculosData, serviciosData, proximosData] = await Promise.all([
+        getClientesAsync(),
+        getVehiculosAsync(),
+        getServiciosAsync(),
+        getUpcomingServicesAsync(7)
+      ])
+      setClientes(clientesData)
+      setVehiculos(vehiculosData)
+      setServicios(serviciosData)
+      setProximos(proximosData)
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }, [toast])
+
+  useEffect(() => {
+    let cancelled = false
+    queueMicrotask(() => {
+      if (!cancelled) loadDashboard()
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [loadDashboard])
 
   const totalServicios = servicios.length
   const ingresos = servicios.reduce((acc, s) => acc + montoServicio(s), 0)

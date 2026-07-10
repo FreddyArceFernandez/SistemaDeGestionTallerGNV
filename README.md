@@ -1,322 +1,285 @@
-# 🚗 Sistema de Gestión — Taller Rixsiy GNV
+# Sistema de Gestión Taller GNV
 
-Sistema web integral para la administración operativa de un taller de conversión **GNV (Gas Natural Vehicular)** en Bolivia.
+Sistema local de gestión operativa para un taller de conversión y mantenimiento GNV. Está pensado para el trabajo diario de secretaría: registrar clientes, vehículos, servicios, movimientos de caja y próximos mantenimientos desde una interfaz de escritorio clara y rápida.
 
-La plataforma permite centralizar la gestión de clientes, vehículos, órdenes de servicio, control financiero y seguimiento de mantenimientos, reemplazando procesos manuales realizados mediante registros físicos o archivos Excel.
+El proyecto funciona como aplicación React y está preparado para distribución en Windows mediante Electron.
 
 ![Dashboard del sistema](https://github.com/user-attachments/assets/8256c29e-6f81-40ab-a6fc-09b7cacff02d)
 
----
+## Objetivo
 
-# 📌 Descripción del proyecto
-![Uploading image.png…]()
+Centralizar la gestión básica del taller sin depender de archivos Excel, registros físicos o conexión permanente a internet.
 
-Este proyecto fue desarrollado como una solución personalizada para un **cliente real: Taller Rixsiy GNV**.
+El sistema permite:
 
-El sistema fue diseñado para optimizar los procesos administrativos y operativos del taller, permitiendo gestionar:
+- Registrar y consultar clientes.
+- Asociar vehículos a cada cliente.
+- Registrar servicios GNV realizados.
+- Controlar ingresos, otros ingresos y egresos.
+- Revisar próximos mantenimientos.
+- Ejecutar la aplicación localmente como sistema de escritorio.
 
-- Registro de clientes.
-- Administración de vehículos.
-- Control de órdenes de servicio.
-- Gestión de ingresos y egresos.
-- Seguimiento de mantenimientos futuros.
+## Enfoque de uso
 
-La aplicación se encuentra orientada a escenarios reales de operación, soportando actualmente la gestión de más de **100 órdenes de servicio activas**.
+El sistema está diseñado para ser usado principalmente por una secretaria o persona encargada de la administración del taller.
 
-> **Nota:** Este repositorio contiene la versión pública del frontend preparada para ejecución local. Los servicios backend, configuraciones privadas y datos reales del cliente no se incluyen por confidencialidad.
+Por esa razón:
 
----
+- No se implementa un sistema complejo de roles.
+- La prioridad es rapidez de registro y búsqueda.
+- La interfaz está orientada a tareas administrativas repetitivas.
+- La persistencia está pensada para uso local.
+- La aplicación puede entregarse como instalador de Windows.
 
-# ✨ Características principales
+## Características principales
 
-## 📊 Dashboard administrativo
+### Dashboard
 
-Panel general con información relevante del negocio:
+Panel inicial con indicadores generales:
 
-- Cantidad de clientes registrados.
-- Vehículos asociados.
-- Servicios realizados.
+- Total de clientes.
+- Total de vehículos.
+- Total de trabajos registrados.
+- Próximos servicios o mantenimientos.
 - Resumen financiero.
-- Próximos mantenimientos.
 
----
+### Clientes
 
-## 👥 Gestión de clientes
+Módulo para administrar el directorio de clientes:
 
-Permite administrar la información de los clientes:
+- Crear clientes.
+- Editar datos.
+- Eliminar clientes sin vehículos asociados.
+- Buscar por nombre, apellido o celular.
+- Acceder rápidamente al registro de vehículos.
+- Validar teléfonos bolivianos.
 
-- Crear nuevos registros.
-- Actualizar información.
-- Validación de números telefónicos bolivianos.
-- Asociación con múltiples vehículos.
+### Vehículos
 
----
+Módulo para administrar vehículos asociados a clientes:
 
-## 🚘 Gestión de vehículos
+- Registrar placa, marca, modelo y año.
+- Evitar placas duplicadas.
+- Buscar por cliente, placa, marca, modelo o año.
+- Crear servicios directamente desde el vehículo.
+- Bloquear eliminación cuando existen servicios asociados.
 
-Administración completa de vehículos asociados:
+### Servicios
 
-- Registro de placa, marca, modelo y año.
-- Control de relación cliente-vehículo.
-- Acceso rápido a nuevos servicios.
-- Validación de registros duplicados.
+Módulo para registrar trabajos realizados:
 
----
-
-## 🔧 Gestión de servicios GNV
-
-Control de órdenes relacionadas con:
-
-- Conversión e instalación GNV.
-- Recalificación.
+- Conversión o instalación GNV.
 - Revisión anual.
+- Recalificación.
 - Mantenimiento.
 - Venta de accesorios.
 
-Cada servicio almacena:
+Cada servicio registra:
 
-- Tipo de trabajo realizado.
+- Vehículo.
+- Tipo de servicio.
 - Fecha.
-- Vehículo asociado.
-- Monto generado.
+- Descripción u observaciones.
+- Monto cobrado.
 
----
+### Caja
 
-## 💰 Control de caja
+Módulo financiero simplificado para gestión diaria:
 
-Módulo financiero para seguimiento económico:
+- Los servicios con monto se suman automáticamente como ingresos.
+- Los movimientos externos se registran como `Otros ingresos`.
+- Los egresos se registran por separado.
+- El saldo se calcula automáticamente.
+- Se puede filtrar por día, semana, mes o rango de fechas.
 
-- Registro de ingresos por servicios.
-- Ingresos manuales.
-- Registro de egresos.
-- Cálculo de saldo.
-- Filtros por rango de fechas.
+Regla importante:
 
----
+```txt
+Saldo = ingresos por servicios + otros ingresos - egresos
+```
 
-## 🔔 Sistema de próximos servicios
+Para evitar duplicaciones, la interfaz aclara que no se debe registrar como `Otro ingreso` un dinero que ya proviene de un servicio registrado.
 
-Generación de alertas según ciclos de mantenimiento:
+### Próximos servicios
+
+El sistema calcula mantenimientos futuros según ciclos GNV:
 
 | Servicio | Periodo configurado |
-|----------|--------------------|
-| Conversión / Instalación GNV | 365 días |
+|---|---:|
+| Conversión / instalación GNV | 365 días |
 | Revisión anual | 365 días |
 | Recalificación | 5 años |
 
-Permite identificar clientes próximos a requerir mantenimiento.
+## Reglas de negocio
 
----
+- Un cliente no puede eliminarse si tiene vehículos registrados.
+- Un vehículo no puede eliminarse si tiene servicios registrados.
+- Una placa no puede repetirse.
+- Un servicio solo puede registrarse sobre un vehículo existente.
+- Los servicios con monto alimentan automáticamente la caja.
+- Los próximos mantenimientos se calculan según el tipo de servicio.
 
-# 🧠 Reglas de negocio implementadas
+## Arquitectura
 
-## Integridad de información
-
-- Un cliente no puede eliminarse si posee vehículos registrados.
-- Un vehículo no puede eliminarse si tiene servicios asociados.
-
-## Gestión de ciclos GNV
-
-El sistema calcula automáticamente fechas futuras de mantenimiento según el tipo de servicio realizado.
-
-## Navegación inteligente
-
-Implementación de flujos cruzados entre módulos mediante parámetros dinámicos:
-
-
-?nuevo=1
-?vehiculo_id=
-
-
----
-
-# 🏗️ Arquitectura del sistema
-
-La aplicación está organizada bajo una arquitectura modular basada en componentes.
-
-
-Frontend
-│
-├── Components
-│ └── Componentes UI reutilizables
-│
-├── Pages
-│ └── Módulos principales del sistema
-│
-├── Services
-│ └── Lógica de negocio y operaciones CRUD
-│
-├── Context
-│ └── Estados globales y notificaciones
-│
-├── Data
-│ └── Capa de persistencia
-│
-└── Utils
-└── Validaciones y utilidades
-
-
-La separación de responsabilidades facilita una futura migración hacia una arquitectura con API REST y base de datos empresarial.
-
----
-
-# 🛠️ Tecnologías utilizadas
-
-## Frontend
-
-| Tecnología | Uso |
-|---|---|
-| React 19 | Construcción de interfaz |
-| Vite 8 | Herramienta de desarrollo y compilación |
-| React Router 7 | Navegación SPA |
-| CSS personalizado | Diseño visual y componentes |
-
----
-
-## Persistencia
-
-| Tecnología | Uso |
-|---|---|
-| LocalStorage | Persistencia de datos en versión demo |
-| Service Layer | Abstracción de acceso a datos |
-
----
-
-## Herramientas
-
-| Tecnología | Uso |
-|---|---|
-| Git | Control de versiones |
-| GitHub | Gestión del código |
-| ESLint | Calidad y análisis estático |
-
----
-
-# 📂 Estructura del proyecto
-
-
+```txt
 SistemaDeGestionTallerGNV/
-
 ├── README.md
-
 └── dashboard/
+    ├── electron/
+    │   ├── main.cjs
+    │   ├── preload.cjs
+    │   ├── database.cjs
+    │   └── repositories/
+    ├── public/
+    └── src/
+        ├── components/
+        ├── config/
+        ├── context/
+        ├── data/
+        ├── layouts/
+        ├── pages/
+        ├── services/
+        ├── styles/
+        └── utils/
+```
 
-├── public/
+## Tecnologías
 
-└── src/
+| Tecnología | Uso |
+|---|---|
+| React 19 | Interfaz de usuario |
+| Vite 8 | Desarrollo y compilación |
+| React Router 7 | Navegación SPA |
+| Electron 43 | Aplicación de escritorio |
+| better-sqlite3 | Base de datos local SQLite |
+| Electron Builder | Instalador para Windows |
+| ESLint | Revisión estática |
+| CSS personalizado | Diseño visual |
 
-    ├── components/
-    │   └── Componentes reutilizables
+## Persistencia de datos
 
-    ├── config/
-    │   └── Configuración del sistema
+El proyecto utiliza SQLite local cuando se ejecuta como aplicación de escritorio con Electron.
 
-    ├── context/
-    │   └── Estados globales
+Estado actual:
 
-    ├── data/
-    │   └── Persistencia local
+- `Clientes` trabaja con SQLite local dentro de Electron.
+- `Vehículos` trabaja con SQLite local dentro de Electron.
+- `Servicios` trabaja con SQLite local dentro de Electron.
+- `Caja`, egresos y otros ingresos trabajan con SQLite local dentro de Electron.
+- Al abrir la app solo en navegador, se conserva un respaldo basado en `localStorage` para desarrollo.
 
-    ├── layouts/
-    │   └── Estructura principal
+La base SQLite se crea en el directorio de datos de usuario de Electron, no dentro del repositorio.
 
-    ├── pages/
-    │   └── Dashboard, Clientes,
-    │       Vehículos, Servicios y Caja
+En Windows, la ruta es similar a:
 
-    ├── services/
-    │   └── Lógica de negocio
+```txt
+C:\Users\Usuario\AppData\Roaming\Taller GNV\data\taller_gnv.db
+```
 
-    ├── styles/
-    │   └── Estilos globales
+## Instalación
 
-    └── utils/
-        └── Validaciones
+Requisitos recomendados:
 
----
+- Node.js 18 o superior.
+- npm.
+- Windows para generar instalador con Electron Builder.
 
-# ⚙️ Instalación y ejecución
-
-## Requisitos
-
-- Node.js 18+
-- npm 9+
-
----
-
-## Clonar repositorio
+Clonar el repositorio:
 
 ```bash
 git clone https://github.com/FreddyArceFernandez/SistemaDeGestionTallerGNV.git
-Acceder al proyecto
 cd SistemaDeGestionTallerGNV/dashboard
-Instalar dependencias
 npm install
-Ejecutar entorno de desarrollo
+```
+
+Si se usa `better-sqlite3` con Electron, reconstruir módulos nativos cuando sea necesario:
+
+```bash
+npx electron-rebuild
+```
+
+Este paso solo suele ser necesario si se reinstala `node_modules`, cambia Electron, cambia Node o se actualiza `better-sqlite3`.
+
+## Ejecución en desarrollo
+
+Modo web:
+
+```bash
 npm run dev
+```
 
 Aplicación disponible en:
 
+```txt
 http://localhost:5173
-📜 Scripts disponibles
-Comando	Descripción
-npm run dev	Ejecuta servidor local
-npm run build	Genera versión producción
-npm run preview	Previsualiza compilación
-npm run lint	Analiza calidad del código
-🗄️ Modelo de datos
+```
 
-La versión pública utiliza almacenamiento local mediante localStorage.
+Modo escritorio con Electron:
 
-Clave	Entidad
-taller_clientes	Clientes
-taller_vehiculos	Vehículos
-taller_servicios	Órdenes de servicio
-taller_egresos	Egresos
-taller_ingresos_manuales	Ingresos
+```bash
+npm run electron:dev
+```
 
-La capa:
+## Generar versión de producción
 
-src/services/
+Compilar frontend:
 
-permite desacoplar la lógica del almacenamiento, facilitando la migración futura hacia:
+```bash
+npm run build
+```
 
-API REST.
-Base de datos SQL.
-Sistema multiusuario.
-🚀 Roadmap
- Backend con FastAPI / Node.js.
- Base de datos PostgreSQL/MySQL.
- Autenticación y autorización por roles.
- Gestión avanzada de cilindros GNV.
- Estados de órdenes de trabajo.
- Reportes PDF y Excel.
- Notificaciones automáticas mediante WhatsApp API.
-📸 Capturas del sistema
+Generar instalador de Windows:
 
-(Agregar imágenes adicionales)
+```bash
+npm run electron:build
+```
 
-Dashboard principal.
-Gestión de clientes.
-Gestión de vehículos.
-Órdenes de servicio.
-Control de caja.
-👨‍💻 Autor
+La salida del instalador se genera en:
+
+```txt
+dashboard/dist_electron/
+```
+
+## Scripts disponibles
+
+| Comando | Descripción |
+|---|---|
+| `npm run dev` | Ejecuta Vite en modo desarrollo |
+| `npm run build` | Genera la versión web de producción |
+| `npm run preview` | Previsualiza el build |
+| `npm run lint` | Ejecuta ESLint |
+| `npm run electron:dev` | Ejecuta Vite y abre Electron |
+| `npm run electron:build` | Genera build e instalador Electron |
+
+## Validaciones
+
+Últimas verificaciones realizadas:
+
+```bash
+npm run lint
+npm run build
+```
+
+Ambas tareas compilan correctamente en el estado actual del proyecto.
+
+## Roadmap
+
+Próximas mejoras recomendadas:
+
+- Agregar backups locales automáticos.
+- Agregar restauración de backups.
+- Implementar cierre diario de caja.
+- Generar reportes PDF y Excel.
+- Crear orden de servicio imprimible.
+- Agregar protección simple por PIN o contraseña local.
+- Mejorar instalador final con ícono, nombre e información del taller.
+
+## Autor
+
 Freddy Arce Fernandez
 
-Ingeniero de Sistemas
+Ingeniero de Sistemas  
 Full-Stack Developer | Applied AI
 
-Especializado en:
-
-Desarrollo de aplicaciones web.
-Inteligencia Artificial aplicada.
-Sistemas inteligentes.
-Infraestructura tecnológica.
-
-GitHub:
-https://github.com/FreddyArceFernandez
-
-LinkedIn:
-https://linkedin.com/in/freddyarcef
-
+GitHub: [FreddyArceFernandez](https://github.com/FreddyArceFernandez)  
+LinkedIn: [freddyarcef](https://linkedin.com/in/freddyarcef)

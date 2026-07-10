@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
+import { useCallback, useState, useEffect } from "react"
 
 import Modal from "../components/Modal"
 import FieldError from "../components/FieldError"
@@ -11,12 +10,12 @@ import {
   validateRequired,
   todayISO
 } from "../utils/validation"
-import { getServicios } from "../services/servicioService"
-import { getVehiculos } from "../services/vehiculoService"
-import { getClientes } from "../services/clienteService"
-import { getEgresos, createEgreso, deleteEgreso, updateEgreso } from "../services/egresoService"
+import { getServiciosAsync } from "../services/servicioService"
+import { getVehiculosAsync } from "../services/vehiculoService"
+import { getClientesAsync } from "../services/clienteService"
+import { getEgresosAsync, createEgreso, deleteEgreso, updateEgreso } from "../services/egresoService"
 import {
-  getIngresosManuales,
+  getIngresosManualesAsync,
   createIngresoManual,
   deleteIngresoManual,
   updateIngresoManual
@@ -71,10 +70,14 @@ const initialFiltros = {
 export default function Caja() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { toast, confirm } = useUi()
-  const [, bump] = useState(0)
   const [filtros, setFiltros] = useState(initialFiltros)
   const [pageIngreso, setPageIngreso] = useState(1)
   const [pageEgreso, setPageEgreso] = useState(1)
+  const [servicios, setServicios] = useState([])
+  const [vehiculos, setVehiculos] = useState([])
+  const [clientes, setClientes] = useState([])
+  const [egresosRaw, setEgresosRaw] = useState([])
+  const [manualRaw, setManualRaw] = useState([])
 
   const [openModalEgreso, setOpenModalEgreso] = useState(false)
   const [openModalIng, setOpenModalIng] = useState(false)
@@ -101,7 +104,34 @@ export default function Caja() {
     }
   }, [searchParams, setSearchParams])
 
-  const load = () => bump((x) => x + 1)
+  const load = useCallback(async () => {
+    try {
+      const [serviciosData, vehiculosData, clientesData, egresosData, manualData] = await Promise.all([
+        getServiciosAsync(),
+        getVehiculosAsync(),
+        getClientesAsync(),
+        getEgresosAsync(),
+        getIngresosManualesAsync()
+      ])
+      setServicios(serviciosData)
+      setVehiculos(vehiculosData)
+      setClientes(clientesData)
+      setEgresosRaw(egresosData)
+      setManualRaw(manualData)
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }, [toast])
+
+  useEffect(() => {
+    let cancelled = false
+    queueMicrotask(() => {
+      if (!cancelled) load()
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [load])
 
   const rangoEfectivo = filtros.periodoRapido
     ? presetPeriodo(filtros.periodoRapido)
@@ -109,12 +139,6 @@ export default function Caja() {
 
   const desdeF = rangoEfectivo.desde
   const hastaF = rangoEfectivo.hasta
-
-  const servicios = getServicios()
-  const vehiculos = getVehiculos()
-  const clientes = getClientes()
-  const egresosRaw = getEgresos()
-  const manualRaw = getIngresosManuales()
 
   const getVehiculo = (vid) =>
     vehiculos.find((v) => String(v.vehiculo_id) === String(vid))
@@ -125,16 +149,17 @@ export default function Caja() {
     .map((s) => {
       const v = getVehiculo(s.vehiculo_id)
       const c = v ? getCliente(v.cliente_id) : null
-      const clienteNombre = c ? `${c.nombre} ${c.apellido}`.trim() : "—"
-      const vehTxt = v ? `${v.placa} · ${v.marca} ${v.modelo}` : "—"
+      const clienteNombre = c ? `${c.nombre} ${c.apellido}`.trim() : "-"
+      const vehTxt = v ? `${v.placa} - ${v.marca} ${v.modelo}` : "-"
       return {
         key: `in-${s.servicio_id}`,
         fecha: fechaServicio(s),
         monto: montoServicio(s),
         detalle: tipoLabel(s.tipo),
         tipoRaw: s.tipo || "",
-        sub: clienteNombre ? `${clienteNombre} · ${vehTxt}` : vehTxt,
-        fuente: "servicio"
+        sub: clienteNombre ? `${clienteNombre} - ${vehTxt}` : vehTxt,
+        fuente: "servicio",
+        fuenteLabel: "Servicio automático"
       }
     })
     .filter((row) => row.fecha)
@@ -145,8 +170,9 @@ export default function Caja() {
     monto: Number(im.monto) || 0,
     detalle: im.detalle,
     tipoRaw: "_manual",
-    sub: "Manual",
+    sub: "Registrado aparte",
     fuente: "manual",
+    fuenteLabel: "Otro ingreso",
     ingreso_manual_id: im.ingreso_manual_id
   }))
 
@@ -253,7 +279,7 @@ export default function Caja() {
     return next
   }
 
-  const submitEgreso = (ev) => {
+  const submitEgreso = async (ev) => {
     ev.preventDefault()
     const nextErrors = validateMovimiento(formEg)
     if (Object.keys(nextErrors).length) {
@@ -263,7 +289,7 @@ export default function Caja() {
 
     try {
       if (editEgreso) {
-        updateEgreso({
+        await updateEgreso({
           egreso_id: editEgreso.egreso_id,
           fecha: formEg.fecha,
           monto: formEg.monto,
@@ -271,17 +297,17 @@ export default function Caja() {
         })
         toast.success("Egreso actualizado.")
       } else {
-        createEgreso(formEg)
+        await createEgreso(formEg)
         toast.success("Egreso registrado.")
       }
       closeEgreso()
-      load()
+      await load()
     } catch (err) {
       toast.error(err.message)
     }
   }
 
-  const submitIngManual = (ev) => {
+  const submitIngManual = async (ev) => {
     ev.preventDefault()
     const nextErrors = validateMovimiento(formIng)
     if (Object.keys(nextErrors).length) {
@@ -291,19 +317,19 @@ export default function Caja() {
 
     try {
       if (editIng) {
-        updateIngresoManual({
+        await updateIngresoManual({
           ingreso_manual_id: editIng.ingreso_manual_id,
           fecha: formIng.fecha,
           monto: formIng.monto,
           detalle: formIng.detalle
         })
-        toast.success("Ingreso actualizado.")
+        toast.success("Otro ingreso actualizado.")
       } else {
-        createIngresoManual(formIng)
-        toast.success("Ingreso registrado.")
+        await createIngresoManual(formIng)
+        toast.success("Otro ingreso registrado.")
       }
       closeIng()
-      load()
+      await load()
     } catch (err) {
       toast.error(err.message)
     }
@@ -369,22 +395,22 @@ export default function Caja() {
       variant: "danger"
     })
     if (!ok) return
-    deleteEgreso(id)
-    load()
+    await deleteEgreso(id)
+    await load()
     toast.success("Egreso eliminado.")
   }
 
   const handleDeleteIngManual = async (id) => {
     const ok = await confirm({
       title: "Eliminar ingreso",
-      message: "¿Eliminar este ingreso manual?",
+      message: "¿Eliminar este otro ingreso?",
       confirmLabel: "Eliminar",
       variant: "danger"
     })
     if (!ok) return
-    deleteIngresoManual(id)
-    load()
-    toast.success("Ingreso eliminado.")
+    await deleteIngresoManual(id)
+    await load()
+    toast.success("Otro ingreso eliminado.")
   }
 
   return (
@@ -392,16 +418,21 @@ export default function Caja() {
       <div className="page-head page-head-row">
         <div>
           <h1>Caja</h1>
-          <p>Ingresos y egresos</p>
+          <p>Servicios cobrados, otros ingresos y egresos</p>
         </div>
         <div className="actions actions--head">
           <button type="button" className="btn btn-primary" onClick={openNewIng}>
-            <IconPlus size={17} /> Ingreso manual
+            <IconPlus size={17} /> Otro ingreso
           </button>
           <button type="button" className="btn btn-primary" onClick={openNewEgreso}>
             <IconPlus size={17} /> Egreso
           </button>
         </div>
+      </div>
+
+      <div className="caja-guidance" role="note">
+        <strong>Importante:</strong> los servicios con monto ya se suman automáticamente como ingresos.
+        Usa <span>Otro ingreso</span> solo para dinero que no proviene de un servicio registrado.
       </div>
 
       <section className="caja-summary" aria-label="Resumen de caja">
@@ -486,7 +517,7 @@ export default function Caja() {
               onChange={handleFiltroChange}
             >
               <option value="">Todos</option>
-              <option value="_manual">Ingresos manuales</option>
+              <option value="_manual">Otros ingresos</option>
               <option value="conversion">Conversión</option>
               <option value="revision_anual">Revisión anual</option>
               <option value="recalificacion">Recalificación</option>
@@ -559,6 +590,9 @@ export default function Caja() {
                     <tr key={row.key} className="caja-table__row">
                       <td>{row.fecha}</td>
                       <td>
+                        <span className={`caja-source-badge caja-source-badge--${row.fuente}`}>
+                          {row.fuenteLabel}
+                        </span>
                         <span className="caja-concept">{row.detalle}</span>
                         <span className="caja-concept-sub">{row.sub}</span>
                       </td>
@@ -569,8 +603,8 @@ export default function Caja() {
                             <button
                               type="button"
                               className="btn-icon btn-icon--edit"
-                              title="Editar ingreso"
-                              aria-label="Editar ingreso"
+                              title="Editar otro ingreso"
+                              aria-label="Editar otro ingreso"
                               onClick={() => openEditIng(row)}
                             >
                               <IconPencil />
@@ -578,8 +612,8 @@ export default function Caja() {
                             <button
                               type="button"
                               className="btn-icon btn-icon--danger"
-                              title="Eliminar ingreso"
-                              aria-label="Eliminar ingreso"
+                              title="Eliminar otro ingreso"
+                              aria-label="Eliminar otro ingreso"
                               onClick={() => handleDeleteIngManual(row.ingreso_manual_id)}
                             >
                               <IconTrash />
@@ -775,7 +809,7 @@ export default function Caja() {
       )}
 
       {openModalIng && (
-        <Modal title={editIng ? "Ingreso manual" : "Nuevo ingreso"} onClose={closeIng}>
+        <Modal title={editIng ? "Otro ingreso" : "Nuevo otro ingreso"} onClose={closeIng}>
           <form className="form-in-modal" onSubmit={submitIngManual} noValidate>
             <div className="form-grid">
               <div className={`field${errorsIng.fecha ? " field--invalid" : ""}`}>

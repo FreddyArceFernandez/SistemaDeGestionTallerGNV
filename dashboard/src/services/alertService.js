@@ -1,6 +1,6 @@
-import { getClientes } from "./clienteService"
-import { getVehiculos } from "./vehiculoService"
-import { getServicios } from "./servicioService"
+import { getClientes, getClientesAsync } from "./clienteService"
+import { getVehiculos, getVehiculosAsync } from "./vehiculoService"
+import { getServicios, getServiciosAsync } from "./servicioService"
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
 
@@ -44,6 +44,19 @@ export function getUpcomingServices(dias = 7) {
   const clientes = getClientes()
   const vehiculos = getVehiculos()
   const servicios = getServicios()
+  return buildUpcomingServices({ clientes, vehiculos, servicios, dias })
+}
+
+export async function getUpcomingServicesAsync(dias = 7) {
+  const [clientes, vehiculos, servicios] = await Promise.all([
+    getClientesAsync(),
+    getVehiculosAsync(),
+    getServiciosAsync()
+  ])
+  return buildUpcomingServices({ clientes, vehiculos, servicios, dias })
+}
+
+function buildUpcomingServices({ clientes, vehiculos, servicios, dias }) {
   const today = new Date()
   const hoy = new Date(today.getFullYear(), today.getMonth(), today.getDate())
 

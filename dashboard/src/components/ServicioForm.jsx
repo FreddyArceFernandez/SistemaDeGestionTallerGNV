@@ -108,7 +108,7 @@ export default function ServicioForm({
       noValidate
     >
       {!inModal && (
-        <div className="page-head" style={{ marginBottom: "18px" }}>
+        <div className="page-head form-section-head">
           <h2>{editingServicio ? "Editar trabajo" : "Registrar trabajo"}</h2>
         </div>
       )}
@@ -173,7 +173,7 @@ export default function ServicioForm({
           <FieldError message={errors.monto} />
         </div>
 
-        <div className="field" style={{ gridColumn: "1 / -1" }}>
+        <div className="field field--full">
           <label htmlFor="descripcion">Descripción (opcional)</label>
           <textarea
             id="descripcion"
@@ -192,7 +192,7 @@ export default function ServicioForm({
         </div>
       )}
 
-      <div className="actions" style={{ marginTop: "18px", justifyContent: "flex-end" }}>
+      <div className="form-actions">
         <button className="btn btn-primary" type="submit">
           Guardar
         </button>

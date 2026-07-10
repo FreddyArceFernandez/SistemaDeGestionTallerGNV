@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import Table from "../components/Table"
 import Modal from "../components/Modal"
@@ -8,7 +8,7 @@ import { useUi } from "../context/useUi"
 import { validateCelular, validateRequired } from "../utils/validation"
 
 import {
-  getClientes,
+  getClientesAsync,
   createCliente,
   deleteCliente,
   updateCliente
@@ -19,7 +19,8 @@ function Clientes() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { toast, confirm } = useUi()
 
-  const [clientes, setClientes] = useState(() => getClientes())
+  const [clientes, setClientes] = useState([])
+  const [query, setQuery] = useState("")
   const [openModal, setOpenModal] = useState(false)
   const [form, setForm] = useState({
     nombre: "",
@@ -45,9 +46,23 @@ function Clientes() {
     }
   }, [searchParams, setSearchParams])
 
-  const loadClientes = () => {
-    setClientes(getClientes())
-  }
+  const loadClientes = useCallback(async () => {
+    try {
+      setClientes(await getClientesAsync())
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }, [toast])
+
+  useEffect(() => {
+    let cancelled = false
+    queueMicrotask(() => {
+      if (!cancelled) loadClientes()
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [loadClientes])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -69,15 +84,15 @@ function Clientes() {
     return Object.keys(nextErrors).length === 0
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return
 
     try {
       if (editing) {
-        updateCliente(form)
+        await updateCliente(form)
         toast.success("Cliente actualizado.")
       } else {
-        createCliente(form)
+        await createCliente(form)
         toast.success("Cliente registrado.")
       }
     } catch (error) {
@@ -89,7 +104,7 @@ function Clientes() {
     setErrors({})
     setEditing(false)
     setOpenModal(false)
-    loadClientes()
+    await loadClientes()
   }
 
   const handleDelete = async (id) => {
@@ -102,8 +117,8 @@ function Clientes() {
     if (!ok) return
 
     try {
-      deleteCliente(id)
-      loadClientes()
+      await deleteCliente(id)
+      await loadClientes()
       toast.success("Cliente eliminado.")
     } catch (error) {
       toast.error(error.message)
@@ -134,20 +149,43 @@ function Clientes() {
     navigate(`/vehiculos?cliente_id=${clienteId}`)
   }
 
+  const clientesFiltrados = clientes.filter((cliente) => {
+    const q = query.trim().toLowerCase()
+    if (!q) return true
+    return `${cliente.nombre || ""} ${cliente.apellido || ""} ${cliente.celular || ""}`
+      .toLowerCase()
+      .includes(q)
+  })
+
   return (
     <div className="entity-page">
       <div className="page-head page-head-row">
         <div>
           <h1>Clientes</h1>
-          <p>Directorio</p>
+          <p>{clientes.length} registrados</p>
         </div>
         <button type="button" className="btn btn-primary" onClick={openNuevoCliente}>
           <IconPlus size={17} /> Nuevo cliente
         </button>
       </div>
 
+      <div className="page-toolbar">
+        <div className="field page-toolbar__search">
+          <label htmlFor="buscar-cliente">Buscar cliente</label>
+          <input
+            id="buscar-cliente"
+            placeholder="Nombre, apellido o celular"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        <span className="entity-count">
+          {clientesFiltrados.length} resultado{clientesFiltrados.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
       <Table
-        data={clientes}
+        data={clientesFiltrados}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onAddVehicle={handleAddVehicle}

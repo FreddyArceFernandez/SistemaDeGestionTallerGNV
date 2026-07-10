@@ -3,16 +3,16 @@
   --navy-2: #102b52;
   --yellow: #f5c542;
   --yellow-soft: #fff6d8;
-  --bg: #eef2fb;
-  --bg-soft: #f7f9ff;
+  --bg: #f3f5f8;
+  --bg-soft: #f8fafc;
   --surface: #ffffff;
   --text: #13213a;
   --muted: #667085;
   --border: #e5eaf2;
-  --shadow: 0 14px 40px rgba(11, 31, 58, 0.08);
-  --shadow-soft: 0 8px 24px rgba(11, 31, 58, 0.05);
-  --radius: 24px;
-  --glass: rgba(255, 255, 255, 0.72);
+  --shadow: 0 10px 24px rgba(11, 31, 58, 0.06);
+  --shadow-soft: 0 4px 14px rgba(11, 31, 58, 0.05);
+  --radius: 10px;
+  --glass: rgba(255, 255, 255, 0.94);
 }
 
 * {
@@ -35,10 +35,6 @@ body {
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
-  background-image:
-    radial-gradient(circle at 12% 8%, rgba(245, 197, 66, 0.12), transparent 34%),
-    radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.08), transparent 30%),
-    radial-gradient(circle at 70% 92%, rgba(16, 185, 129, 0.07), transparent 28%);
 }
 
 a {
@@ -63,9 +59,9 @@ select,
 textarea {
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 10px;
   background: var(--surface);
-  padding: 12px 14px;
+  padding: 10px 12px;
   outline: none;
   transition: 0.2s ease;
   color: var(--text);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useCallback, useState, useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
 
 import ServicioForm from "../components/ServicioForm"
@@ -6,17 +6,19 @@ import Modal from "../components/Modal"
 import { IconPlus, IconPencil, IconTrash } from "../components/CrudIcons"
 import { useUi } from "../context/useUi"
 
-import { getClientes } from "../services/clienteService"
+import { getClientes, getClientesAsync } from "../services/clienteService"
 
 import {
   getServicios,
+  getServiciosAsync,
   createServicio,
   deleteServicio,
   updateServicio
 } from "../services/servicioService"
 
 import {
-  getVehiculos
+  getVehiculos,
+  getVehiculosAsync
 } from "../services/vehiculoService"
 
 import { presetPeriodo } from "../utils/dateRanges"
@@ -76,11 +78,30 @@ export default function Servicios() {
     }
   }, [searchParams, setSearchParams])
 
-  const loadData = () => {
-    setServicios(getServicios())
-    setVehiculos(getVehiculos())
-    setClientes(getClientes())
-  }
+  const loadData = useCallback(async () => {
+    try {
+      const [serviciosData, vehiculosData, clientesData] = await Promise.all([
+        getServiciosAsync(),
+        getVehiculosAsync(),
+        getClientesAsync()
+      ])
+      setServicios(serviciosData)
+      setVehiculos(vehiculosData)
+      setClientes(clientesData)
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }, [toast])
+
+  useEffect(() => {
+    let cancelled = false
+    queueMicrotask(() => {
+      if (!cancelled) loadData()
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [loadData])
 
   const closeModal = () => {
     setOpenModal(false)
@@ -88,16 +109,16 @@ export default function Servicios() {
     setInitialVehiculoId("")
   }
 
-  const handleSave = (servicioPayload) => {
+  const handleSave = async (servicioPayload) => {
     try {
       if (servicioPayload.servicio_id != null) {
-        updateServicio(servicioPayload)
+        await updateServicio(servicioPayload)
         toast.success("Servicio actualizado.")
       } else {
-        createServicio(servicioPayload)
+        await createServicio(servicioPayload)
         toast.success("Servicio registrado.")
       }
-      loadData()
+      await loadData()
       closeModal()
     } catch (error) {
       toast.error(error.message)
@@ -114,8 +135,8 @@ export default function Servicios() {
     if (!ok) return
 
     try {
-      deleteServicio(id)
-      loadData()
+      await deleteServicio(id)
+      await loadData()
       toast.success("Servicio eliminado.")
     } catch (error) {
       toast.error(error.message)
@@ -221,7 +242,7 @@ export default function Servicios() {
       <div className="page-head page-head-row">
         <div>
           <h1>Servicios</h1>
-          <p>Por vehículo</p>
+          <p>{serviciosFiltrados.length} de {servicios.length} registros</p>
         </div>
         <button type="button" className="btn btn-primary" onClick={openNuevoServicio}>
           <IconPlus size={17} /> Nuevo servicio
@@ -244,7 +265,7 @@ export default function Servicios() {
         </Modal>
       )}
 
-      <div className="panel" style={{ marginBottom: "16px" }}>
+      <div className="panel service-filters">
         <div className="caja-presets caja-presets--inline">
           <div className="caja-presets__btns" role="group" aria-label="Intervalo">
             {[
@@ -322,7 +343,7 @@ export default function Servicios() {
       </div>
 
       <div className="table-wrap">
-        <table>
+        <table className="data-table">
           <thead>
             <tr>
               <th>Cliente</th>
@@ -338,7 +359,7 @@ export default function Servicios() {
           <tbody>
             {currentServicios.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: "center", padding: "24px" }}>
+                <td colSpan="7" className="table-empty">
                   No hay servicios registrados.
                 </td>
               </tr>
